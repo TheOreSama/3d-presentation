@@ -10,14 +10,25 @@
     .app{display:grid;grid-template-columns:1fr 360px;grid-template-rows:auto 1fr;grid-template-areas:"hdr hdr" "stage panel";height:100%}
     header{grid-area:hdr;display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #ccc;background:#f1f5f9}
     .stage{grid-area:stage;position:relative;background:linear-gradient(to top right, #e2e8f0 0%, #f8fafc 40%, #ffffff 90%)}
-    model-viewer{width:100%;height:100%}
-    .panel{grid-area:panel;border-left:1px solid #ccc;display:flex;flex-direction:column;background:#f9fafb}
+    model-viewer{width:100%;height:100%;min-height:420px}
+    .panel{grid-area:panel;border-left:1px solid #e5e7eb;display:flex;flex-direction:column;background:#f9fafb}
     .list{overflow:auto;padding:8px}
-    .card{border:1px solid #ddd;border-radius:8px;padding:8px;margin:6px;background:#fffdfd;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
-    .card.active{outline:2px solid #333;background:#ffffff}
+    .card{border:1px solid #e5e7eb;border-radius:10px;margin:8px 6px;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.04);transition:all .3s ease}
+    .card .header{padding:8px;font-weight:600;cursor:pointer}
+    .card .body{max-height:0;overflow:hidden;opacity:0;transition:max-height 800ms ease-in-out, opacity 800ms ease-in-out,padding 800ms ease-in-out;padding:0 8px}
+    .card.open .body{max-height:200px;opacity:1;padding:8px}
+    .card.active{outline:2px solid #333}
+    .desc{color:#334155;line-height:1.4}
     .hotspot{--size:14px;width:var(--size);height:var(--size);border-radius:50%;border:2px solid #fff;background:#ef4444;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
     #connector{position:fixed;inset:0;pointer-events:none}
     #connector line{stroke:#6b7280;stroke-width:2;stroke-dasharray:6 6;opacity:.9}
+
+    /* Мобильная вёрстка */
+    @media (max-width: 768px){
+      .app{grid-template-columns:1fr;grid-template-rows:auto 1fr minmax(180px, 42vh);grid-template-areas:"hdr" "stage" "panel"}
+      .panel{border-left:none;border-top:1px solid #e5e7eb}
+      model-viewer{min-height:50vh}
+    }
   </style>
 </head>
 <body>
@@ -42,126 +53,144 @@
 </div>
 
 <script type="module">
-  const viewer = document.getElementById('viewer');
-  const list = document.getElementById('items');
-  const line = document.getElementById('connector-line');
+const viewer = document.getElementById('viewer');
+const list = document.getElementById('items');
+const line = document.getElementById('connector-line');
 
-  let HOTSPOTS = [
-    {id:'p1', title:'Механизм контроля ускорения', desc:'Узел подведения и распределения потоков внутри системы.', position:'-0.195m -0.009m -0.180m', normal:'-1.000m -0.000m -0.000m'},
-    {id:'p2', title:'Двигатель АДТ', desc:'Зона обслуживания и осмотра оборудования.', position:'0.627m -0.105m -0.090m', normal:'0.000m 1.000m 0.000m'},
-    {id:'p3', title:'Многоступенчатый вал', desc:'Измеряет параметры системы и передаёт сигналы на пульт управления.', position:'0.039m -0.001m -0.053m', normal:'0.864m -0.098m -0.493m'},
-    {id:'p4', title:'Контроллер ускорения', desc:'Обеспечивает питание и коммутацию элементов установки.', position:'0.614m 0.066m 0.165m', normal:'0.000m 0.108m 0.994m'},
-    {id:'p5', title:'Демпферные площадки', desc:'Финальный участок, выводящий обработанный продукт.', position:'0.128m 0.086m 0.098m', normal:'-0.168m -0.099m 0.981m'}
-  ];
-  let selectedId = null;
+let HOTSPOTS = [
+  {id:'p1', title:'Механизм контроля ускорения', desc:'Узел подведения и распределения потоков внутри системы.', position:'-0.195m -0.009m -0.180m', normal:'-1.000m -0.000m -0.000m'},
+  {id:'p2', title:'Двигатель АДТ', desc:'Зона обслуживания и осмотра оборудования.', position:'0.627m -0.105m -0.090m', normal:'0.000m 1.000m 0.000m'},
+  {id:'p3', title:'Многоступенчатый вал', desc:'Измеряет параметры системы и передаёт сигналы на пульт управления.', position:'0.039m -0.001m -0.053m', normal:'0.864m -0.098m -0.493m'},
+  {id:'p4', title:'Контроллер ускорения', desc:'Обеспечивает питание и коммутацию элементов установки.', position:'0.614m 0.066m 0.165m', normal:'0.000m 0.108m 0.994m'},
+  {id:'p5', title:'Демпферные площадки', desc:'Финальный участок, выводящий обработанный продукт.', position:'0.128m 0.086m 0.098m', normal:'-0.168m -0.099m 0.981m'}
+];
+let selectedId = null;
 
-  (function seedPreset(){
-    HOTSPOTS.forEach((h,i)=>{
-      const btn=document.createElement('button');
-      btn.className='hotspot';
-      btn.setAttribute('slot',`hotspot-${i}`);
-      btn.dataset.hotspotId=h.id;
-      btn.setAttribute('data-position',h.position);
-      btn.setAttribute('data-normal',h.normal);
-      btn.setAttribute('aria-label',h.title);
-      btn.onclick=()=>selectHotspot(h.id);
-      viewer.appendChild(btn);
-    });
-    setTimeout(()=>{ try{ renderList(); }catch(e){} }, 0);
-  })();
-
-  function renderList(){
-    list.innerHTML='';
-    HOTSPOTS.forEach((h, idx)=>{
-      const card=document.createElement('div');
-      card.className='card'+(selectedId===h.id?' active':'');
-      card.dataset.id=h.id;
-      const title = h.title || ('Точка '+(idx+1));
-      const desc  = h.desc  || '';
-      card.innerHTML=`<strong>${title}</strong><br><small>${desc}</small>`;
-      card.onclick=()=>selectHotspot(h.id);
-      list.appendChild(card);
-    });
-  }
-
-  function selectHotspot(id){
-    selectedId=id;
-    document.querySelectorAll('.card').forEach(c=>c.classList.toggle('active',c.dataset.id===id));
-    drawConnector();
-    if(isAutoRotating) startConnectorLoop();
-  }
-
-  function drawConnector(){
-    if(!selectedId){line.style.visibility='hidden';return;}
-    const dot=viewer.querySelector(`[data-hotspot-id="${selectedId}"]`);
-    const card=[...document.querySelectorAll('.card')].find(c=>c.dataset.id===selectedId);
-    if(!dot||!card){line.style.visibility='hidden';return;}
-    const r1=dot.getBoundingClientRect();
-    const r2=card.getBoundingClientRect();
-    const x1=r1.left+r1.width/2;
-    const y1=r1.top+r1.height/2;
-    const x2=r2.left;
-    const y2=r2.top+r2.height/2;
-    line.setAttribute('x1',x1);
-    line.setAttribute('y1',y1);
-    line.setAttribute('x2',x2);
-    line.setAttribute('y2',y2);
-    line.style.visibility='visible';
-  }
-
-  window.addEventListener('resize',drawConnector);
-  window.addEventListener('scroll',drawConnector,{passive:true});
-  viewer.addEventListener('camera-change',drawConnector);
-
-  // === Автовращение после 15 секунд бездействия ===
-  let idleTimer;
-  let isAutoRotating = false;
-  let rafId = null; // цикл для обновления пунктира во время автоворота
-
-  function startConnectorLoop(){
-    if(rafId) return;
-    const step = ()=>{ drawConnector(); rafId = requestAnimationFrame(step); };
-    rafId = requestAnimationFrame(step);
-  }
-  function stopConnectorLoop(){
-    if(rafId){ cancelAnimationFrame(rafId); rafId = null; }
-  }
-
-  function enableAutoRotate(){
-    if(isAutoRotating) return;
-    viewer.setAttribute('auto-rotate','');
-    viewer.setAttribute('rotation-per-second','8deg'); // мягкое вращение
-    isAutoRotating = true;
-    startConnectorLoop(); // обновляем пунктир каждый кадр
-  }
-  function disableAutoRotate(){
-    if(!isAutoRotating) return;
-    viewer.removeAttribute('auto-rotate');
-    isAutoRotating = false;
-    stopConnectorLoop(); // можно остановить цикл; разово перерисуем
-    drawConnector();
-  }
-  function restartIdleTimer(){
-    clearTimeout(idleTimer);
-    disableAutoRotate();
-    idleTimer = setTimeout(enableAutoRotate, 15000);
-  }
-
-  // Сбрасываем таймер при любом взаимодействии
-  ['pointerdown','wheel','keydown','touchstart'].forEach(evt=>{
-    window.addEventListener(evt, restartIdleTimer, {passive:true});
+(function seedPreset(){
+  HOTSPOTS.forEach((h,i)=>{
+    const btn=document.createElement('button');
+    btn.className='hotspot';
+    btn.setAttribute('slot',`hotspot-${i}`);
+    btn.dataset.hotspotId=h.id;
+    btn.setAttribute('data-position',h.position);
+    btn.setAttribute('data-normal',h.normal);
+    btn.setAttribute('aria-label',h.title);
+    btn.onclick=()=>selectHotspot(h.id);
+    viewer.appendChild(btn);
   });
-  // Также при начале вращения/панорамирования камерой
-  viewer.addEventListener('camera-change', ()=>{
-    // если пользователь двигает камеру, остановим автоворот и перезапустим таймер
-    if(viewer.interactionPrompt === 'none'){} // no-op, но событие ловим
-    restartIdleTimer();
-  });
+  setTimeout(()=>{ try{ renderList(); }catch(e){} }, 0);
+})();
 
-  // Запускаем таймер после загрузки модели
-  viewer.addEventListener('load', ()=>{
-    restartIdleTimer();
+function renderList(){
+  list.innerHTML='';
+  HOTSPOTS.forEach((h, idx)=>{
+    const card=document.createElement('div');
+    card.className='card'+(selectedId===h.id?' active open':'');
+    card.dataset.id=h.id;
+
+    const head=document.createElement('div');
+    head.className='header';
+    head.textContent=h.title || ('Точка '+(idx+1));
+    head.onclick=()=>{selectHotspot(h.id); toggleCard(h.id);};
+
+    const body=document.createElement('div');
+    body.className='body';
+    const desc=document.createElement('div');
+    desc.className='desc';
+    desc.textContent=h.desc;
+    body.appendChild(desc);
+
+    card.appendChild(head);
+    card.appendChild(body);
+    list.appendChild(card);
   });
+}
+
+function toggleCard(id){
+  const cards=document.querySelectorAll('.card');
+  cards.forEach(c=>{
+    const body=c.querySelector('.body');
+    const isTarget = c.dataset.id===id;
+    if(isTarget){
+      if(body) body.style.transition = 'max-height 800ms ease-in-out, opacity 800ms ease-in-out, padding 800ms ease-in-out';
+      c.classList.add('open');
+    }else{
+      if(c.classList.contains('open') && body){
+        body.style.transition = 'max-height 150ms ease, opacity 150ms ease, padding 150ms ease';
+      }
+      c.classList.remove('open');
+    }
+  });
+  setTimeout(drawConnector, 820);
+}
+
+function selectHotspot(id){
+  selectedId=id;
+  document.querySelectorAll('.card').forEach(c=>c.classList.toggle('active',c.dataset.id===id));
+  toggleCard(id);
+  drawConnector();
+  if(isAutoRotating) startConnectorLoop();
+}
+
+function drawConnector(){
+  if(!selectedId){line.style.visibility='hidden';return;}
+  const dot=viewer.querySelector(`[data-hotspot-id="${selectedId}"]`);
+  const card=[...document.querySelectorAll('.card')].find(c=>c.dataset.id===selectedId);
+  if(!dot||!card){line.style.visibility='hidden';return;}
+  const r1=dot.getBoundingClientRect();
+  const r2=card.getBoundingClientRect();
+  const x1=r1.left+r1.width/2;
+  const y1=r1.top+r1.height/2;
+  const x2=r2.left;
+  const y2=r2.top+r2.height/2;
+  line.setAttribute('x1',x1);
+  line.setAttribute('y1',y1);
+  line.setAttribute('x2',x2);
+  line.setAttribute('y2',y2);
+  line.style.visibility='visible';
+}
+
+window.addEventListener('resize',drawConnector);
+window.addEventListener('scroll',drawConnector,{passive:true});
+viewer.addEventListener('camera-change',drawConnector);
+
+// === Автовращение после 15 секунд бездействия ===
+let idleTimer;
+let isAutoRotating = false;
+let rafId = null;
+
+function startConnectorLoop(){
+  if(rafId) return;
+  const step = ()=>{ drawConnector(); rafId = requestAnimationFrame(step); };
+  rafId = requestAnimationFrame(step);
+}
+function stopConnectorLoop(){
+  if(rafId){ cancelAnimationFrame(rafId); rafId = null; }
+}
+function enableAutoRotate(){
+  if(isAutoRotating) return;
+  viewer.setAttribute('auto-rotate','');
+  viewer.setAttribute('rotation-per-second','8deg');
+  isAutoRotating = true;
+  startConnectorLoop();
+}
+function disableAutoRotate(){
+  if(!isAutoRotating) return;
+  viewer.removeAttribute('auto-rotate');
+  isAutoRotating = false;
+  stopConnectorLoop();
+  drawConnector();
+}
+function restartIdleTimer(){
+  clearTimeout(idleTimer);
+  disableAutoRotate();
+  idleTimer = setTimeout(enableAutoRotate, 15000);
+}
+['pointerdown','wheel','keydown','touchstart'].forEach(evt=>{
+  window.addEventListener(evt, restartIdleTimer, {passive:true});
+});
+viewer.addEventListener('camera-change', ()=>{restartIdleTimer();});
+viewer.addEventListener('load', ()=>{restartIdleTimer();});
 </script>
 </body>
 </html>
