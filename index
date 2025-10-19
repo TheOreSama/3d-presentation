@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>3D-презентация: модуль — интерактивные точки</title>
+  <title>3D-презентация: модуль — точки с описанием</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    html,body{height:100%;margin:0;font-family:system-ui,Arial}
+    html,body{height:100%;margin:0;font-family:system-ui,Arial;background:#f8fafc}
     .app{display:grid;grid-template-columns:1fr 360px;grid-template-rows:auto 1fr;grid-template-areas:"hdr hdr" "stage panel";height:100%}
-    header{grid-area:hdr;display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #ccc}
-    .stage{grid-area:stage;position:relative;background:linear-gradient(to top, #e5e7eb 0%, #ffffff 60%)}
+    header{grid-area:hdr;display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #ccc;background:#f1f5f9}
+    .stage{grid-area:stage;position:relative;background:linear-gradient(to top right, #e2e8f0 0%, #f8fafc 40%, #ffffff 90%)}
     model-viewer{width:100%;height:100%}
-    .panel{grid-area:panel;border-left:1px solid #ccc;display:flex;flex-direction:column}
+    .panel{grid-area:panel;border-left:1px solid #ccc;display:flex;flex-direction:column;background:#f9fafb}
     .list{overflow:auto;padding:8px}
-    .card{border:1px solid #ddd;border-radius:8px;padding:8px;margin:6px;background:#fff;cursor:pointer}
-    .card.active{outline:2px solid #333}
+    .card{border:1px solid #ddd;border-radius:8px;padding:8px;margin:6px;background:#fffdfd;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+    .card.active{outline:2px solid #333;background:#ffffff}
     .hotspot{--size:14px;width:var(--size);height:var(--size);border-radius:50%;border:2px solid #fff;background:#ef4444;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
     #connector{position:fixed;inset:0;pointer-events:none}
     #connector line{stroke:#6b7280;stroke-width:2;stroke-dasharray:6 6;opacity:.9}
@@ -24,12 +24,6 @@
 <div class="app">
   <header>
     <h1>Модуль — интерактивная модель</h1>
-    <!--
-    <label style="margin-left:auto;display:flex;align-items:center;gap:6px">
-      <input id="placeMode" type="checkbox" />
-      <span>Режим добавления (Ctrl+клик)</span>
-    </label>
-    -->
   </header>
 
   <div class="stage">
@@ -44,12 +38,6 @@
   <aside class="panel">
     <h3 style="margin:8px">Описание точек</h3>
     <div id="items" class="list"></div>
-    <!--
-    <div style="padding:8px">
-      <button class="btn" id="deleteSelected">Удалить выбранную</button>
-      <button class="btn" id="clearAll">Удалить все</button>
-    </div>
-    -->
   </aside>
 </div>
 
@@ -58,40 +46,43 @@
   const list = document.getElementById('items');
   const line = document.getElementById('connector-line');
 
-  const HOTSPOTS = [
-    {id:'p1', title:'Входной модуль', desc:'Узел подведения и распределения потоков внутри системы.', position:'0.05m 0.02m 0.12m', normal:'0 1 0'},
-    {id:'p2', title:'Сервисная площадка', desc:'Зона обслуживания и осмотра оборудования.', position:'0.28m 0.03m 0.18m', normal:'0 1 0'},
-    {id:'p3', title:'Датчик контроля', desc:'Измеряет параметры системы и передаёт сигналы на пульт управления.', position:'-0.15m 0.04m 0.10m', normal:'0 1 0'},
-    {id:'p4', title:'Силовой блок', desc:'Обеспечивает питание и коммутацию элементов установки.', position:'0.00m 0.015m -0.14m', normal:'0 1 0'},
-    {id:'p5', title:'Выходной тракт', desc:'Финальный участок, выводящий обработанный продукт.', position:'-0.10m 0.03m -0.09m', normal:'0 1 0'}
+  let HOTSPOTS = [
+    {id:'p1', title:'Механизм контроля ускорения', desc:'Узел подведения и распределения потоков внутри системы.', position:'-0.195m -0.009m -0.180m', normal:'-1.000m -0.000m -0.000m'},
+    {id:'p2', title:'Двигатель АДТ', desc:'Зона обслуживания и осмотра оборудования.', position:'0.627m -0.105m -0.090m', normal:'0.000m 1.000m 0.000m'},
+    {id:'p3', title:'Многоступенчатый вал', desc:'Измеряет параметры системы и передаёт сигналы на пульт управления.', position:'0.039m -0.001m -0.053m', normal:'0.864m -0.098m -0.493m'},
+    {id:'p4', title:'Контроллер ускорения', desc:'Обеспечивает питание и коммутацию элементов установки.', position:'0.614m 0.066m 0.165m', normal:'0.000m 0.108m 0.994m'},
+    {id:'p5', title:'Демпферные площадки', desc:'Финальный участок, выводящий обработанный продукт.', position:'0.128m 0.086m 0.098m', normal:'-0.168m -0.099m 0.981m'}
   ];
   let selectedId = null;
 
-  // создаём точки в model-viewer
-  HOTSPOTS.forEach((h,i)=>{
-    const btn=document.createElement('button');
-    btn.className='hotspot';
-    btn.setAttribute('slot',`hotspot-${i}`);
-    btn.dataset.hotspotId=h.id;
-    btn.setAttribute('data-position',h.position);
-    btn.setAttribute('data-normal',h.normal);
-    btn.setAttribute('aria-label',h.title);
-    btn.onclick=()=>selectHotspot(h.id);
-    viewer.appendChild(btn);
-  });
+  (function seedPreset(){
+    HOTSPOTS.forEach((h,i)=>{
+      const btn=document.createElement('button');
+      btn.className='hotspot';
+      btn.setAttribute('slot',`hotspot-${i}`);
+      btn.dataset.hotspotId=h.id;
+      btn.setAttribute('data-position',h.position);
+      btn.setAttribute('data-normal',h.normal);
+      btn.setAttribute('aria-label',h.title);
+      btn.onclick=()=>selectHotspot(h.id);
+      viewer.appendChild(btn);
+    });
+    setTimeout(()=>{ try{ renderList(); }catch(e){} }, 0);
+  })();
 
   function renderList(){
     list.innerHTML='';
-    HOTSPOTS.forEach(h=>{
+    HOTSPOTS.forEach((h, idx)=>{
       const card=document.createElement('div');
       card.className='card'+(selectedId===h.id?' active':'');
       card.dataset.id=h.id;
-      card.innerHTML=`<strong>${h.title}</strong><br><small>${h.desc}</small>`;
+      const title = h.title || ('Точка '+(idx+1));
+      const desc  = h.desc  || '';
+      card.innerHTML=`<strong>${title}</strong><br><small>${desc}</small>`;
       card.onclick=()=>selectHotspot(h.id);
       list.appendChild(card);
     });
   }
-  renderList();
 
   function selectHotspot(id){
     selectedId=id;
