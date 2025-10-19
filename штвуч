@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D-презентация с точками</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    .app{display:grid;grid-template-columns:1fr 360px;grid-template-rows:64px 1fr;grid-template-areas:"hdr hdr" "stage panel";height:100%}
+    header{grid-area:hdr;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid #e5e7eb}
+    header h1{font-size:18px;margin:0;font-weight:600}
+    .stage{grid-area:stage;position:relative;background:#0b1115}
+    model-viewer{width:100%;height:100%;--poster-color:#0b1115}
+    .panel{grid-area:panel;border-left:1px solid #e5e7eb;display:flex;flex-direction:column}
+    .panel h2{font-size:14px;margin:12px 16px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em}
+    .list{overflow:auto;padding:8px 8px 24px}
+    .card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:8px;background:#fff;cursor:pointer;transition:transform .1s}
+    .card:hover{transform:translateY(-1px)}
+    .card.active{outline:2px solid #111827}
+    .card small{display:block;color:#6b7280}
+    .badge{display:inline-block;border-radius:999px;padding:2px 8px;font-size:12px;background:#111827;color:#fff;margin-bottom:6px}
+
+    /* стили подсказок на самом 3D */
+    .hotspot{--size:12px;width:var(--size);height:var(--size);border-radius:999px;border:2px solid #fff;background:#ef4444;box-shadow:0 0 0 2px rgba(0,0,0,.25);}
+    .annotation{background:#111827;color:#fff;padding:6px 8px;border-radius:8px;font-size:12px;white-space:nowrap}
+    .annotation h4{margin:0 0 4px;font-size:12px}
+    .annotation p{margin:0;color:#cbd5e1}
+
+    /* мобильная адаптация */
+    @media (max-width: 900px){
+      .app{grid-template-columns:1fr;grid-template-rows:56px 1fr 260px;grid-template-areas:"hdr" "stage" "panel"}
+      .panel{border-left:0;border-top:1px solid #e5e7eb}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Резервуар и насосная — интерактивная 3D-схема</h1>
+  </header>
+
+  <!-- СЦЕНА 3D -->
+  <div class="stage">
+    <!-- Замените src на ваш .glb/.gltf -->
+    <model-viewer id="viewer"
+      src="/assets/tank.glb"
+      camera-controls
+      touch-action="pan-y"
+      exposure="1.0"
+      environment-image="neutral"
+      interaction-prompt="auto"
+      shadow-intensity="0"
+      ar ar-modes="webxr scene-viewer quick-look"
+      autoplay
+    >
+      <!-- Пример точек. Позиции задаются в координатах модели (метры) -->
+      <button class="hotspot" slot="hotspot-0" data-hotspot-id="inlet" data-position="0.4 1.2 0.9" data-normal="0 1 0" aria-label="Входной патрубок"></button>
+      <div class="annotation" slot="hotspot-1" data-hotspot-id="ladder" data-position="-0.85 0.0 1.1" data-normal="0 1 0">
+        <h4>Лестница</h4>
+        <p>Обслуживание крыши резервуара</p>
+      </div>
+      <button class="hotspot" slot="hotspot-2" data-hotspot-id="sensor" data-position="0.05 0.55 -0.75" data-normal="0 1 0" aria-label="Датчик уровня"></button>
+    </model-viewer>
+  </div>
+
+  <!-- ПАНЕЛЬ ОПИСАНИЙ -->
+  <aside class="panel">
+    <h2>Элементы</h2>
+    <div id="items" class="list"></div>
+  </aside>
+</div>
+
+<script type="module">
+  // Конфигурация точек (в одном месте — удобно наполнять с бэка)
+  const HOTSPOTS = [
+    {
+      id: 'inlet',
+      title: 'Входной патрубок',
+      subtitle: 'DN100, сталь 09Г2С',
+      description: 'Подключение к подающему трубопроводу. Оснащён обратным клапаном и запорной арматурой.',
+      camera: { target: '0.35m 1.1m 0.8m', fov: '35deg', orbit: '20deg 70deg 2.2m' }
+    },
+    {
+      id: 'ladder',
+      title: 'Лестница и площадка',
+      subtitle: 'Доступ на крышу',
+      description: 'Оцинкованная лестница с ограждением, соответствует ГОСТ.',
+      camera: { target: '-0.9m 0.1m 1.05m', fov: '45deg', orbit: '-120deg 75deg 2.8m' }
+    },
+    {
+      id: 'sensor',
+      title: 'Датчик уровня',
+      subtitle: 'Электроконтактный манометр',
+      description: 'Сигнал на шкаф управления при достижении уставки.',
+      camera: { target: '0.0m 0.55m -0.7m', fov: '35deg', orbit: '145deg 60deg 2.4m' }
+    }
+  ];
+
+  const viewer = document.getElementById('viewer');
+  const list = document.getElementById('items');
+
+  // Рендер карточек справа
+  HOTSPOTS.forEach((h, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = h.id;
+    card.innerHTML = `<span class="badge">#${idx+1}</span><div><strong>${h.title}</strong><small>${h.subtitle}</small></div><p>${h.description}</p>`;
+    card.addEventListener('click', () => focusOn(h.id));
+    list.appendChild(card);
+  });
+
+  function setActive(id){
+    document.querySelectorAll('.card').forEach(c=>c.classList.toggle('active', c.dataset.id===id));
+  }
+
+  async function focusOn(id){
+    const cfg = HOTSPOTS.find(h=>h.id===id);
+    if(!cfg) return;
+    setActive(id);
+    // Плавно поворачиваем камеру к нужной зоне
+    viewer.cameraTarget = cfg.camera.target;
+    viewer.fieldOfView = cfg.camera.fov;
+    viewer.cameraOrbit = cfg.camera.orbit;
+    // Подсветим связанную точку анимацией (через CSS)
+    const el = [...viewer.querySelectorAll('[data-hotspot-id]')].find(e=>e.dataset.hotspotId===id);
+    if(el){
+      el.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:600});
+    }
+  }
+
+  // Клик по точке на модели → фокус справа
+  viewer.addEventListener('click', (ev)=>{
+    const path = ev.composedPath();
+    const hit = path.find(n => n?.dataset && n.dataset.hotspotId);
+    if(hit){
+      focusOn(hit.dataset.hotspotId);
+    }
+  });
+
+  // Когда модель загрузилась — наводим на первую точку
+  viewer.addEventListener('load', ()=> focusOn(HOTSPOTS[0].id));
+</script>
+
+</body>
+</html>
