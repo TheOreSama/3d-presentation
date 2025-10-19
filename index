@@ -88,6 +88,7 @@
     selectedId=id;
     document.querySelectorAll('.card').forEach(c=>c.classList.toggle('active',c.dataset.id===id));
     drawConnector();
+    if(isAutoRotating) startConnectorLoop();
   }
 
   function drawConnector(){
@@ -109,7 +110,58 @@
   }
 
   window.addEventListener('resize',drawConnector);
+  window.addEventListener('scroll',drawConnector,{passive:true});
   viewer.addEventListener('camera-change',drawConnector);
+
+  // === Автовращение после 15 секунд бездействия ===
+  let idleTimer;
+  let isAutoRotating = false;
+  let rafId = null; // цикл для обновления пунктира во время автоворота
+
+  function startConnectorLoop(){
+    if(rafId) return;
+    const step = ()=>{ drawConnector(); rafId = requestAnimationFrame(step); };
+    rafId = requestAnimationFrame(step);
+  }
+  function stopConnectorLoop(){
+    if(rafId){ cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  function enableAutoRotate(){
+    if(isAutoRotating) return;
+    viewer.setAttribute('auto-rotate','');
+    viewer.setAttribute('rotation-per-second','8deg'); // мягкое вращение
+    isAutoRotating = true;
+    startConnectorLoop(); // обновляем пунктир каждый кадр
+  }
+  function disableAutoRotate(){
+    if(!isAutoRotating) return;
+    viewer.removeAttribute('auto-rotate');
+    isAutoRotating = false;
+    stopConnectorLoop(); // можно остановить цикл; разово перерисуем
+    drawConnector();
+  }
+  function restartIdleTimer(){
+    clearTimeout(idleTimer);
+    disableAutoRotate();
+    idleTimer = setTimeout(enableAutoRotate, 15000);
+  }
+
+  // Сбрасываем таймер при любом взаимодействии
+  ['pointerdown','wheel','keydown','touchstart'].forEach(evt=>{
+    window.addEventListener(evt, restartIdleTimer, {passive:true});
+  });
+  // Также при начале вращения/панорамирования камерой
+  viewer.addEventListener('camera-change', ()=>{
+    // если пользователь двигает камеру, остановим автоворот и перезапустим таймер
+    if(viewer.interactionPrompt === 'none'){} // no-op, но событие ловим
+    restartIdleTimer();
+  });
+
+  // Запускаем таймер после загрузки модели
+  viewer.addEventListener('load', ()=>{
+    restartIdleTimer();
+  });
 </script>
 </body>
 </html>
