@@ -3,110 +3,122 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>3D-презентация: концепт-кар</title>
+  <title>3D-презентация: модуль — интерактивные точки</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-    .app{display:grid;grid-template-columns:1fr 360px;grid-template-rows:64px 1fr;grid-template-areas:"hdr hdr" "stage panel";height:100%}
-    header{grid-area:hdr;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid #e5e7eb}
-    header h1{font-size:18px;margin:0;font-weight:600}
-    .stage{grid-area:stage;position:relative;background:#0b1115}
-    model-viewer{width:100%;height:100%;--poster-color:#0b1115}
-    .panel{grid-area:panel;border-left:1px solid #e5e7eb;display:flex;flex-direction:column}
-    .panel h2{font-size:14px;margin:12px 16px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em}
-    .list{overflow:auto;padding:8px 8px 24px}
-    .card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:8px;background:#fff;cursor:pointer;transition:transform .1s}
-    .card:hover{transform:translateY(-1px)}
-    .card.active{outline:2px solid #111827}
-    .card small{display:block;color:#6b7280}
-    .badge{display:inline-block;border-radius:999px;padding:2px 8px;font-size:12px;background:#111827;color:#fff;margin-bottom:6px}
-
-    .hotspot{--size:12px;width:var(--size);height:var(--size);border-radius:999px;border:2px solid #fff;background:#ef4444;box-shadow:0 0 0 2px rgba(0,0,0,.25);}
-    .annotation{background:#111827;color:#fff;padding:6px 8px;border-radius:8px;font-size:12px;white-space:nowrap}
-    .annotation h4{margin:0 0 4px;font-size:12px}
-    .annotation p{margin:0;color:#cbd5e1}
-
-    @media (max-width: 900px){
-      .app{grid-template-columns:1fr;grid-template-rows:56px 1fr 260px;grid-template-areas:"hdr" "stage" "panel"}
-      .panel{border-left:0;border-top:1px solid #e5e7eb}
-    }
+    html,body{height:100%;margin:0;font-family:system-ui,Arial}
+    .app{display:grid;grid-template-columns:1fr 360px;grid-template-rows:auto 1fr;grid-template-areas:"hdr hdr" "stage panel";height:100%}
+    header{grid-area:hdr;display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #ccc}
+    .stage{grid-area:stage;position:relative;background:linear-gradient(to top, #e5e7eb 0%, #ffffff 60%)}
+    model-viewer{width:100%;height:100%}
+    .panel{grid-area:panel;border-left:1px solid #ccc;display:flex;flex-direction:column}
+    .list{overflow:auto;padding:8px}
+    .card{border:1px solid #ddd;border-radius:8px;padding:8px;margin:6px;background:#fff;cursor:pointer}
+    .card.active{outline:2px solid #333}
+    .hotspot{--size:14px;width:var(--size);height:var(--size);border-radius:50%;border:2px solid #fff;background:#ef4444;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+    #connector{position:fixed;inset:0;pointer-events:none}
+    #connector line{stroke:#6b7280;stroke-width:2;stroke-dasharray:6 6;opacity:.9}
   </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1>Концепт-кар — интерактивная 3D-модель</h1>
+    <h1>Модуль — интерактивная модель</h1>
+    <!--
+    <label style="margin-left:auto;display:flex;align-items:center;gap:6px">
+      <input id="placeMode" type="checkbox" />
+      <span>Режим добавления (Ctrl+клик)</span>
+    </label>
+    -->
   </header>
 
   <div class="stage">
-    <model-viewer id="viewer"
-      src="free_concept_car_004_-_public_domain_cc0.glb"
-      camera-controls
-      touch-action="pan-y"
-      exposure="1.0"
-      environment-image="neutral"
-      interaction-prompt="auto"
-      shadow-intensity="0.5"
-      ar ar-modes="webxr scene-viewer quick-look"
-      autoplay>
-
-      <button class="hotspot" slot="hotspot-0" data-hotspot-id="front" data-position="0 0.5 2" data-normal="0 1 0" aria-label="Перед автомобиля"></button>
-      <div class="annotation" slot="hotspot-1" data-hotspot-id="interior" data-position="0 1 0" data-normal="0 1 0">
-        <h4>Салон</h4>
-        <p>Инновационный дизайн и эргономика</p>
-      </div>
-      <button class="hotspot" slot="hotspot-2" data-hotspot-id="rear" data-position="0 0 -2" data-normal="0 1 0" aria-label="Задняя часть"></button>
+    <model-viewer id="viewer" crossorigin="anonymous"
+      src="https://TheOreSama.github.io/3d-presentation/modul.glb"
+      camera-controls touch-action="pan-y" shadow-intensity="0.5" autoplay>
     </model-viewer>
   </div>
 
+  <svg id="connector" width="100%" height="100%"><line id="connector-line" x1="0" y1="0" x2="0" y2="0" style="visibility:hidden"/></svg>
+
   <aside class="panel">
-    <h2>Элементы модели</h2>
+    <h3 style="margin:8px">Описание точек</h3>
     <div id="items" class="list"></div>
+    <!--
+    <div style="padding:8px">
+      <button class="btn" id="deleteSelected">Удалить выбранную</button>
+      <button class="btn" id="clearAll">Удалить все</button>
+    </div>
+    -->
   </aside>
 </div>
 
 <script type="module">
-  const HOTSPOTS = [
-    { id: 'front', title: 'Перед автомобиля', subtitle: 'Аэродинамический дизайн', description: 'Фары и решётка радиатора создают агрессивный стиль.', camera: { target: '0m 0.3m 1.5m', fov: '35deg', orbit: '0deg 75deg 3m' } },
-    { id: 'interior', title: 'Салон', subtitle: 'Интерьер', description: 'Современные материалы и мультимедиа.', camera: { target: '0m 0.8m 0m', fov: '45deg', orbit: '90deg 70deg 2.5m' } },
-    { id: 'rear', title: 'Задняя часть', subtitle: 'Спортивный стиль', description: 'Светодиодные фонари и диффузор.', camera: { target: '0m 0.3m -1.5m', fov: '35deg', orbit: '180deg 65deg 3m' } }
-  ];
-
   const viewer = document.getElementById('viewer');
   const list = document.getElementById('items');
+  const line = document.getElementById('connector-line');
 
-  HOTSPOTS.forEach((h, idx) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.dataset.id = h.id;
-    card.innerHTML = `<span class="badge">#${idx+1}</span><div><strong>${h.title}</strong><small>${h.subtitle}</small></div><p>${h.description}</p>`;
-    card.addEventListener('click', () => focusOn(h.id));
-    list.appendChild(card);
+  const HOTSPOTS = [
+    {id:'p1', title:'Входной модуль', desc:'Узел подведения и распределения потоков внутри системы.', position:'0.05m 0.02m 0.12m', normal:'0 1 0'},
+    {id:'p2', title:'Сервисная площадка', desc:'Зона обслуживания и осмотра оборудования.', position:'0.28m 0.03m 0.18m', normal:'0 1 0'},
+    {id:'p3', title:'Датчик контроля', desc:'Измеряет параметры системы и передаёт сигналы на пульт управления.', position:'-0.15m 0.04m 0.10m', normal:'0 1 0'},
+    {id:'p4', title:'Силовой блок', desc:'Обеспечивает питание и коммутацию элементов установки.', position:'0.00m 0.015m -0.14m', normal:'0 1 0'},
+    {id:'p5', title:'Выходной тракт', desc:'Финальный участок, выводящий обработанный продукт.', position:'-0.10m 0.03m -0.09m', normal:'0 1 0'}
+  ];
+  let selectedId = null;
+
+  // создаём точки в model-viewer
+  HOTSPOTS.forEach((h,i)=>{
+    const btn=document.createElement('button');
+    btn.className='hotspot';
+    btn.setAttribute('slot',`hotspot-${i}`);
+    btn.dataset.hotspotId=h.id;
+    btn.setAttribute('data-position',h.position);
+    btn.setAttribute('data-normal',h.normal);
+    btn.setAttribute('aria-label',h.title);
+    btn.onclick=()=>selectHotspot(h.id);
+    viewer.appendChild(btn);
   });
 
-  function setActive(id){
-    document.querySelectorAll('.card').forEach(c=>c.classList.toggle('active', c.dataset.id===id));
+  function renderList(){
+    list.innerHTML='';
+    HOTSPOTS.forEach(h=>{
+      const card=document.createElement('div');
+      card.className='card'+(selectedId===h.id?' active':'');
+      card.dataset.id=h.id;
+      card.innerHTML=`<strong>${h.title}</strong><br><small>${h.desc}</small>`;
+      card.onclick=()=>selectHotspot(h.id);
+      list.appendChild(card);
+    });
+  }
+  renderList();
+
+  function selectHotspot(id){
+    selectedId=id;
+    document.querySelectorAll('.card').forEach(c=>c.classList.toggle('active',c.dataset.id===id));
+    drawConnector();
   }
 
-  async function focusOn(id){
-    const cfg = HOTSPOTS.find(h=>h.id===id);
-    if(!cfg) return;
-    setActive(id);
-    viewer.cameraTarget = cfg.camera.target;
-    viewer.fieldOfView = cfg.camera.fov;
-    viewer.cameraOrbit = cfg.camera.orbit;
-    const el = [...viewer.querySelectorAll('[data-hotspot-id]')].find(e=>e.dataset.hotspotId===id);
-    if(el){ el.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:600}); }
+  function drawConnector(){
+    if(!selectedId){line.style.visibility='hidden';return;}
+    const dot=viewer.querySelector(`[data-hotspot-id="${selectedId}"]`);
+    const card=[...document.querySelectorAll('.card')].find(c=>c.dataset.id===selectedId);
+    if(!dot||!card){line.style.visibility='hidden';return;}
+    const r1=dot.getBoundingClientRect();
+    const r2=card.getBoundingClientRect();
+    const x1=r1.left+r1.width/2;
+    const y1=r1.top+r1.height/2;
+    const x2=r2.left;
+    const y2=r2.top+r2.height/2;
+    line.setAttribute('x1',x1);
+    line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2);
+    line.setAttribute('y2',y2);
+    line.style.visibility='visible';
   }
 
-  viewer.addEventListener('click', (ev)=>{
-    const path = ev.composedPath();
-    const hit = path.find(n => n?.dataset && n.dataset.hotspotId);
-    if(hit){ focusOn(hit.dataset.hotspotId); }
-  });
-
-  viewer.addEventListener('load', ()=> focusOn(HOTSPOTS[0].id));
+  window.addEventListener('resize',drawConnector);
+  viewer.addEventListener('camera-change',drawConnector);
 </script>
-
 </body>
 </html>
